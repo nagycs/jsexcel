@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="hu">
+	<head>
+		<meta charset="utf-8" />
+		<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.2/jquery.min.js"></script>
+		<link rel="stylesheet" type="text/css" href="style.css">
+		
+		
+		<script>
+			function createRandomTable(cols, rows){
+				var i, j;
+				var $table, $tr, $td;
+				$table = $('<table>');
+				for(i = 0; i<rows ; i++){
+					$tr = $('<tr>');
+					for(j = 0; j<cols ; j++){
+						$td = $('<td>'+Math.round(Math.random()*100)+'</td>');
+						$tr.append($td);
+					}
+					$table.append($tr);
+				}				
+				return $table;
+			}
+
+			function doexcel($table,maxi,maxj){
+				$table.addClass('excel');
+
+				// add colum heads
+				var $headrow = $table.find('tr:first').clone();
+				var index = 1;
+				$headrow.find('td').addClass('head').each(
+					function(){
+						$(this).html(index++).attr('type','col').attr('num', index-1)
+					}
+				);
+				$table.prepend($headrow);
+
+				// add row heads
+				index = 0;
+				$table.find('tr').each(
+					function(){
+						$(this).
+							prepend(
+								$('<td>').addClass('head').html(index++).attr('type','row').attr('num', index-1)
+							)
+					}
+				);
+				$table.find('tr:first td:first').removeClass('head').html('')
+
+				// create cells
+				var i = 1;
+				var j = 1;
+				$table.find('tr:not(:first) td:not(.head)').each(function(){
+						var value = $(this).html();
+						$(this).html(
+							$('<input type="text">').val(value).attr('row', i).attr('col', j)
+						);
+						if(i == maxi){i = 1; j++;}else{i++}
+					}
+				);
+
+				// create col sums
+				var $sumrow = $table.find('tr:first').clone();
+				$sumrow.find('td:not(:first)').removeClass('head').addClass('sum').html('0');
+				$sumrow.find('td:first').removeClass('head').html('sum');
+				$table.append($sumrow);
+
+				// create row sums
+				$table.find('tr').append($('<td>'));
+
+				$table.find('tr:not(:first)').each(
+					function(){
+						$(this).
+							find('td:last').
+							addClass('sum').
+							html('0');
+					}
+				);
+				$table.find('tr:first td:last').html('sum');
+
+				// calculate sums
+				var calc = function($table){
+					
+					$table.find('tr:not(:first):not(:last)').each(function(){
+						var sum = 0;
+						$(this).find('input').each(
+							function(){
+								sum = sum + parseInt($(this).val());
+							}
+						);
+						$(this).find('td:last').html(sum);
+					});
+
+					$table.find('tr:first td.head').each(function(){
+						var sum = 0;
+						var colnum = parseInt($(this).html())+1
+
+						$table.find(
+							'tr td:nth-child('+colnum+') input').each(
+							function(){
+								sum = sum + parseInt($(this).val());
+						});
+						$table.find('tr:last td:nth-child('+colnum+')').html(sum);
+					})
+
+					var sum = 0;
+					$table.find('input').each(function(){
+						var value = $(this).val();
+						value = parseInt(value);
+						sum = sum + value;
+					});
+					$table.find('tr:last td:last').html(sum)
+				}
+
+				calc($table);
+
+				$table.find('input').keyup(
+					function(){calc($table)}
+				);
+				
+
+			}
+
+			function makeGraph(selector){
+				$(selector).each(function(){
+					var $graph = $('<div>').addClass('graph');
+					$('body').append($graph);
+					$(this).find('td.head').click(function(){
+						var i;
+						var value;
+						var $inputs = [];
+						var $bar;
+						var $table;
+						var max = 100, unit = 255/100, volume;
+						var r, g, b=0;
+						var direction, number;
+						$table = $(this).parent().parent().parent();
+						$graph.html('');
+						type = $(this).attr('type');
+						number = $(this).attr('num');
+						$table.find('input['+type+'='+number+']').each(
+							function(){
+								$inputs.push($(this));
+							}
+						);  
+						for(i=0; i<$inputs.length ; i++){
+							value = $inputs[i].val();
+							volume = Math.ceil(value * unit);
+							r = g = 255; b = 0;
+							if(volume > 128) r = (255-volume)*2; else g = volume * 2;
+							$bar = $('<div>').
+								height(value +'px').
+								css('border-top', max - value + 'px solid black').css('background-color', 'rgb('+r+','+g+','+b+')');
+							$bar.prop('input', $inputs[i]);
+							$bar.mouseover(function(){
+								$(this).prop('input').addClass('barover');
+							}).mouseout(function(){
+								$(this).prop('input').removeClass('barover');
+							}).click(function(event){
+								var value = 100-event.offsetY;
+								var volume = Math.ceil(value * 255 / 100);
+								var r = 255, g = 255, b = 0;
+								if(volume > 128) r = (255-volume)*2; else g = volume * 2;
+								$(this).prop('input').val(value);
+								$(this).
+									height(value + 'px').css('border-top', 100-value + 'px solid black').css('background-color', 'rgb('+r+','+g+','+b+')');
+							});
+							$graph.append($bar);
+						}
+					});
+				});
+			}
+			
+
+			$(function(){
+				var $table = createRandomTable(5, 5);
+				$('body').append($table);
+				doexcel($table,5,5)
+				makeGraph('table');
+			});
+		</script>
+	</head>
+	<body>
+	<div id="table"></div>
+	</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
